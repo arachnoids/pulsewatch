@@ -10,6 +10,7 @@ class MonitorController extends Controller
     public function index()
     {
         $monitors = Monitor::where('user_id', auth()->id())
+            ->with('latestPing')
             ->latest()
             ->get();
 
@@ -41,6 +42,7 @@ class MonitorController extends Controller
     public function show(Monitor $monitor)
     {
         abort_if($monitor->user_id !== auth()->id(), 403);
+        $monitor->load('latestPing');
         return view('monitors.show', compact('monitor'));
     }
 

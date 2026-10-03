@@ -27,4 +27,14 @@ class Monitor extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function pings()
+    {
+        return $this->hasMany(Ping::class);
+    }
+
+    public function latestPing()
+    {
+        return $this->hasOne(Ping::class)->latestOfMany('checked_at');
+    }
 }

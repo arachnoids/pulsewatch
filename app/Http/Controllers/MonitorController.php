@@ -69,6 +69,8 @@ class MonitorController extends Controller
             'timeout_seconds' => 'required|integer|min:1|max:60',
         ]);
 
+        $validated['is_active'] = $request->boolean('is_active');
+
         $monitor->update($validated);
 
         return redirect()->route('monitors.index')

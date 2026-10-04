@@ -51,7 +51,9 @@
                                     </td>
                                     <td class="py-2">
                                         <a href="{{ route('monitors.show', $monitor) }}"
-                                           class="text-blue-600 hover:underline">Lihat</a>
+                                            class="text-blue-600 hover:underline">Lihat</a>
+                                        <a href="{{ route('monitors.edit', $monitor) }}"
+                                            class="text-yellow-600 hover:underline ml-2">Edit</a>
                                         <form action="{{ route('monitors.destroy', $monitor) }}"
                                               method="POST" class="inline"
                                               onsubmit="return confirm('Hapus monitor ini?')">

@@ -1,59 +1,161 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 📡 Pulsewatch
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Uptime & performance monitoring for your websites and APIs.**
 
-## About Laravel
+Pulsewatch is a cloud-deployed monitoring tool that pings your endpoints on schedule, stores response metrics over time, and sends email alerts the moment something goes down.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+[🔗 Live Demo](https://pulsewatch-production.up.railway.app) · [📂 GitHub](https://github.com/arachnoids/pulsewatch)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ✨ Features
 
-## Learning Laravel
+- ⏱️ **Scheduled pings** — configurable interval per monitor (30s–1h)
+- 📊 **Visual dashboard** — response time chart, uptime %, avg response
+- 🔔 **Email alerts** — automatic notifications on status transitions (up → down, down → up)
+- 👤 **Multi-user** — each user has their own private monitors
+- 🔒 **Isolated data** — user-scoped queries with authorization checks
+- ✏️ **Full CRUD** — create, edit, delete, and toggle monitors
+- ☁️ **Cloud-native** — web, worker, and scheduler deployed as separate services
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 📸 Screenshots
 
-## Laravel Sponsors
+### Landing Page
+![Landing Page](docs/01-landing.png)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Dashboard — Monitor List
+![Dashboard](docs/02-dashboard.png)
 
-### Premium Partners
+### Monitor Detail — Chart & Statistics
+![Monitor Detail](docs/03-chart.png)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Email Alert on Downtime
+![Email Alert](docs/04-email-alert.png)
 
-## Contributing
+### Edit Monitor
+![Edit Monitor](docs/05-edit.png)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## 🏗️ Architecture
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+┌─────────────────┐
+│   Web (Laravel) │──────┐
+└─────────────────┘      │
+                         ▼
+┌─────────────────┐    ┌──────────────┐
+│  Cron Service   │───▶│  PostgreSQL  │
+│  (schedule:run) │    │  (Railway)   │
+└─────────────────┘    └──────────────┘
+         │                     ▲
+         │ dispatch jobs       │
+         ▼                     │
+┌─────────────────┐            │
+│  Queue (DB)     │            │
+└─────────────────┘            │
+         │                     │
+         ▼                     │
+┌─────────────────┐            │
+│ Worker Service  │────────────┘
+│ (queue:work)    │
+└─────────────────┘
+         │
+         │ HTTP requests
+         ▼
+┌─────────────────┐
+│ Target Websites │
+└─────────────────┘
+```
 
-## Security Vulnerabilities
+### How It Works
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1. **Cron service** runs `schedule:run` every minute → dispatches `PingMonitor` jobs for active monitors
+2. **Queue** (database driver) holds the pending jobs
+3. **Worker service** pulls jobs from the queue and executes them
+4. Each `PingMonitor` job sends an HTTP request to the target URL, records the result, and detects status transitions
+5. On `up → down` transition, an **email alert** is sent via Resend
+6. **Web service** provides the dashboard, CRUD for monitors, and visualizations
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Laravel 12 |
+| Database | PostgreSQL |
+| Queue | Database queue driver |
+| Frontend | Blade + Tailwind + Alpine.js |
+| Chart | Chart.js |
+| Email | Resend |
+| Deployment | Railway (web + worker + cron + Postgres) |
+| Auth | Laravel Breeze |
+
+---
+
+## 🚀 Local Development
+
+### Prerequisites
+
+- PHP 8.2+
+- Composer
+- Node.js 18+
+- MySQL (or XAMPP)
+
+### Setup
+
+```bash
+# Clone
+git clone https://github.com/arachnoids/pulsewatch.git
+cd pulsewatch
+
+# Install dependencies
+composer install
+npm install
+
+# Environment
+cp .env.example .env
+php artisan key:generate
+
+# Configure DB in .env, then:
+php artisan migrate
+
+# Run (3 terminals)
+php artisan serve            # Terminal 1: web
+npm run dev                  # Terminal 2: frontend
+php artisan queue:work       # Terminal 3: worker
+
+# Optional: dispatch pings manually (instead of waiting for scheduler)
+php artisan monitors:dispatch
+```
+
+---
+
+## 🎯 Design Decisions
+
+### Why a separate worker service?
+Pings are I/O-bound and can take seconds. Executing them inside the request cycle would block the web app. By moving them to a queue + worker, the web stays responsive and pings scale independently.
+
+### Why database queue instead of Redis?
+For a portfolio-scale app, the database queue eliminates an extra service dependency. The trade-off is throughput — fine at this scale, but Redis would be the next step for higher volume.
+
+### Why state-transition-based alerts?
+Alerting on *every* failed ping would spam users during outages. By only alerting on status *transitions* (up → down, down → up), users get exactly one alert per incident.
+
+### Why store time-series data indexed on `(monitor_id, checked_at)`?
+Uptime calculations and charts query by monitor over time ranges. A composite index makes these queries O(log n) instead of full table scans.
+
+---
+
+## 📚 Documentation
+
+- [Architecture Details](ARCHITECTURE.md)
+
+---
+
+## 📝 License
+
+MIT

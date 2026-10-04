@@ -42,8 +42,14 @@ class MonitorController extends Controller
     public function show(Monitor $monitor)
     {
         abort_if($monitor->user_id !== auth()->id(), 403);
+
         $monitor->load('latestPing');
-        return view('monitors.show', compact('monitor'));
+
+        $pings = $monitor->pingsLast24Hours();
+        $uptime = $monitor->uptimePercentage(24);
+        $avgResponse = $monitor->averageResponseTime(24);
+
+        return view('monitors.show', compact('monitor', 'pings', 'uptime', 'avgResponse'));
     }
 
     public function edit(Monitor $monitor)

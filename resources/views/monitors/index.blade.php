@@ -41,12 +41,8 @@
                                     <td class="py-2">{{ $monitor->interval_seconds }}s</td>
                                     <td class="py-2">
                                         @if ($monitor->latestPing)
-                                            @php $s = $monitor->latestPing->status; @endphp
-                                            <span class="px-2 py-1 rounded text-white text-sm
-                                                {{ $s === 'up' ? 'bg-green-600' : ($s === 'down' ? 'bg-red-600' : 'bg-yellow-500') }}">
-                                                {{ strtoupper($s) }}
-                                            </span>
-                                            <span class="text-gray-500 text-sm ml-1">
+                                            @include('monitors._status-badge', ['status' => $monitor->latestPing->status])
+                                            <span class="text-gray-500 text-xs ml-1">
                                                 {{ $monitor->latestPing->response_time_ms }}ms
                                             </span>
                                         @else

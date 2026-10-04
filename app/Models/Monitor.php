@@ -69,4 +69,9 @@ class Monitor extends Model
             ->orderBy('checked_at')
             ->get();
     }
+    
+    public function alertLogs()
+    {
+        return $this->hasMany(AlertLog::class);
+    }
 }

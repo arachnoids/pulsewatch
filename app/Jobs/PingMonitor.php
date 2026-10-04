@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Mail\MonitorDownAlert;
+use App\Models\AlertLog;
 use App\Models\Monitor;
 use App\Models\Ping;
 use Illuminate\Bus\Queueable;
@@ -10,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 
 class PingMonitor implements ShouldQueue
 {
@@ -21,6 +24,10 @@ class PingMonitor implements ShouldQueue
 
     public function handle(): void
     {
+        // Ambil status sebelumnya SEBELUM ping baru
+        $previousPing = $this->monitor->latestPing;
+        $previousStatus = $previousPing?->status;
+
         $start = microtime(true);
         $status = 'down';
         $statusCode = null;
@@ -39,12 +46,11 @@ class PingMonitor implements ShouldQueue
 
         $responseTime = (int) round((microtime(true) - $start) * 1000);
 
-        // Kalau response lambat (> 3 detik), tandai degraded
         if ($status === 'up' && $responseTime > 3000) {
             $status = 'degraded';
         }
 
-        Ping::create([
+        $ping = Ping::create([
             'monitor_id' => $this->monitor->id,
             'status_code' => $statusCode,
             'response_time_ms' => $responseTime,
@@ -52,5 +58,44 @@ class PingMonitor implements ShouldQueue
             'error_message' => $errorMessage,
             'checked_at' => now(),
         ]);
+
+        // Deteksi transisi status
+        $this->handleStatusTransition($previousStatus, $status, $ping);
+    }
+
+    protected function handleStatusTransition(?string $previous, string $current, Ping $ping): void
+    {
+        // UP -> DOWN
+        if ($previous === 'up' && $current === 'down') {
+            $this->sendDownAlert($ping);
+        }
+
+        // DOWN -> UP (recovery)
+        if ($previous === 'down' && $current === 'up') {
+            AlertLog::create([
+                'monitor_id' => $this->monitor->id,
+                'type' => 'up',
+                'channel' => 'email',
+                'sent_at' => now(),
+            ]);
+        }
+    }
+
+    protected function sendDownAlert(Ping $ping): void
+    {
+        try {
+            Mail::to($this->monitor->user->email)
+                ->send(new MonitorDownAlert($this->monitor, $ping));
+
+            AlertLog::create([
+                'monitor_id' => $this->monitor->id,
+                'type' => 'down',
+                'channel' => 'email',
+                'sent_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // Log error tapi jangan crash worker
+            logger()->error('Failed to send down alert: ' . $e->getMessage());
+        }
     }
 }
